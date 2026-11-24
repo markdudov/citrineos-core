@@ -6,7 +6,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Barrel first: the ModuleApi files resolve BaseController through src/index.js,
 // so the barrel must finish evaluating before the deep imports below run.
-import { CommandType, OcpiHeaders, PaginatedParams, VersionNumber } from '../../index.js';
+import {
+  CommandType,
+  OcpiHeaders,
+  PaginatedParams,
+  VersionDetailsResponseDTOSchemaName,
+  VersionNumber,
+} from '../../index.js';
+import { applyOpenAPIDecorator } from '@ocpi/apis/openapi-spec-helper/decorators.js';
 import { CommandsModuleApi } from '@ocpi/modules/commands/module/commands-module-api.js';
 import { LocationsModuleApi } from '@ocpi/modules/locations/module/locations-module-api.js';
 import { SessionsModuleApi } from '@ocpi/modules/sessions/module/sessions-module-api.js';
@@ -433,5 +440,27 @@ describe('VersionsModuleApi', () => {
 
     await expect(api.getVersions(404)).rejects.toThrow('tenant missing');
     expect(versionService.getVersions).toHaveBeenCalledTimes(1);
+  });
+
+  it('registers VersionDetailsResponseDTOSchema on getVersionDetails for OpenAPI generation', () => {
+    const operation = applyOpenAPIDecorator(
+      { responses: {} } as never,
+      {
+        action: {
+          target: VersionsModuleApi,
+          method: 'getVersionDetails',
+          route: '/:tenant_id/:versionId',
+          type: 'get',
+        },
+        controller: { target: VersionsModuleApi, route: '/versions', type: 'json' },
+        options: {},
+        params: [],
+        responseHandlers: [],
+      } as never,
+    );
+
+    expect(operation.responses?.['200']?.content?.['application/json']?.schema).toEqual({
+      $ref: `#/components/schemas/${VersionDetailsResponseDTOSchemaName}`,
+    });
   });
 });
